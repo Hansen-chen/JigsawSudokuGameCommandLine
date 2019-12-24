@@ -4,44 +4,40 @@ module Main where
 import Data.Array
 import System.IO
 
-
--- construction
--- table = array ((1,1),(3,3)) [ ((1,1), [1,2]), ((1,2), [1,2]), ((1,3), [1,2]), ((2,1), [1,2]), ((2,2), [1,2]), ((2,3), [1,2]), ((3,1), [1,2]), ((3,2), [1,2]), ((3,3), [1,2]) ]
-
--- modification
--- table = table // [((1,1), '1')]
-
--- access
--- table ! (1,1)
-
-
 -- First matrix records number in the Board, -1 as not filled
 -- The second matrix records the board location
 data Board = Board (Array (Int, Int) Int) (Array (Int, Int) Int) deriving (Eq)
+
+printArray :: ( Array (Int,Int) Int ) -> String
+printArray arr = unlines [unwords [show (arr ! (x, y)) | x <- [0..8]] | y <- [0..8]]
+
+printArraySave :: ( Array (Int,Int) Int ) -> [Char]
+printArraySave arr = unlines [unwords [if (arr ! (x, y)) >= 0 then show (arr ! (x, y)) else show ('.') | x <- [0..8]] | y <- [0..8]]
+
+instance Show Board where
+    show (Board num loc) = "number: \n" ++ printArray num ++ "\n location: \n" ++ printArray loc
+
+    
+-- Load Board
+-- may change to function
+rawBoard = readFile "../../final project/map.txt" >>= return  . map scanString . lines
+
+load = rawBoard >>= \b -> return (Board (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [9..17]))) (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [0..8]))))
+
+-- Test cases
+testMove = load >>= \b -> return (move b 1 1 2)
+
+testMoveError1 = load >>= \b -> return (move b 0 1 2)
+
+testMoveError2 = load >>= \b -> return (move b 0 0 8)
 
 -- Display Board
 -- TODO: output as in pdf file
 displayBoard :: Board -> [Char]
 displayBoard board = show board
 
-printArray :: ( Array (Int,Int) Int ) -> String
-printArray arr = unlines [unwords [show (arr ! (x, y)) | x <- [0..8]] | y <- [0..8]]
-
-instance Show Board where
-    show (Board num loc) = "number: \n" ++ printArray num ++ "\n location: \n" ++ printArray loc
-
--- Load Board
-rawBoard = readFile "../../final project/map2.txt" >>= return  . map scanString . lines
-
-load = rawBoard >>= \b -> return (Board (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [9..17]))) (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [0..8]))))
-
--- TODO: keep asking for make move
--- Like in Hangman.hs
-testMove = load >>= \b -> return (move b 1 1 2)
-
-testMoveError1 = load >>= \b -> return (move b 0 1 2)
-
-testMoveError2 = load >>= \b -> return (move b 0 0 8)
+saveBoardFormat :: Board -> [Char]
+saveBoardFormat (Board num loc) = filter (\x -> (x /=' ' && x/='\'')) (printArraySave loc ++ printArraySave num)
 
 scanChar :: Char -> Int
 scanChar c | '0' <= c && c <= '9' = fromEnum c - fromEnum '0'
@@ -78,18 +74,16 @@ jigsawBlockCheck (Board num loc) x y n = not (elem n (map ((!) num) (map (\((a,b
 jigsawSudokuCheck :: Board -> Bool
 jigsawSudokuCheck (Board num loc) = not (elem (-1) (elems num))
 
--- Save Board
--- TODO: write file with Board Object                    
+-- Save Board (may change to function)
+-- Done in command system
+-- Checked by: readFile "file.txt" >>= \a -> readFile "map.txt" >>= \b -> return (a==b)
 
 -- main access point
 main :: IO ()                    
 main = putStrLn "Jigsaw Sudoku">>= \_ ->
             load >>= \b -> play b
 
-
-
 -- demo play game
-
 play :: Board -> IO ()
 play sudoku = putStr (displayBoard sudoku) >>= \_ ->
                 putStrLn "Please enter command: " >>= \_ ->
@@ -102,7 +96,7 @@ play sudoku = putStr (displayBoard sudoku) >>= \_ ->
                                                          else 
                                                             play b
                             "quit" -> putStrLn "Bye"
-                            "save" -> putStrLn "To be implemented"
+                            "save" -> writeFile "file.txt" (saveBoardFormat sudoku) >>= \_ -> putStrLn "Saved"
                             _ -> play sudoku                                
 
 
