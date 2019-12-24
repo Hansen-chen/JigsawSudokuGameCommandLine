@@ -36,6 +36,8 @@ rawBoard = readFile "../../final project/map.txt" >>= return  . map scanString .
 
 load = rawBoard >>= \b -> return (Board (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [9..17]))) (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [0..8]))))
 
+-- TODO: keep asking for make move
+-- Like in Hangman.hs
 testMove = load >>= \b -> return (move b 1 1 2)
 
 scanChar :: Char -> Int
@@ -52,15 +54,26 @@ arrayConstructor :: [[Int]] -> [((Int, Int), Int)]
 arrayConstructor [[]] = [((0,0),0)]
 arrayConstructor m = [ ((x,y),m!!y!!x) | x <- [0..8], y <- [0..8] ]                   
 
--- Make Move
+-- Make Move with basic checking including the range of location(0-8), number to be inserted (1-9) and the location is empty or not
 move :: Board -> Int -> Int -> Int -> Board
 move (Board num loc) x y n | 0 <= x && x <= 8 
                                 && 0 <= y && y <= 8 
-                                && 1 <= n && n <= 9 
+                                && 1 <= n && n <= 9
+                                && (num ! (x,y)) == -1
                                 = Board (num // [((x,y), n)]) loc
                             | otherwise = (Board num loc)
 
 -- TODO: further error handling for make move
+-- The same line/row does not contain the number you are trying to insert.
+
+
+-- TODO: further error handling for make move
+-- The same box does not contain the number you are trying to insert.
+
+-- Auxiliary function
+-- get the location of number in the same box
+
+
 
 -- Save Board
 -- TODO: write file with Board Object                    
