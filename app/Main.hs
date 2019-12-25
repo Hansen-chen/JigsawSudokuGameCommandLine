@@ -1,6 +1,6 @@
 module Main where
 
--- deal with stack tool when implementing GUI  
+-- Deal with stack tool when implementing GUI  
 import Data.Array
 import System.IO
 
@@ -15,18 +15,19 @@ printArraySave :: ( Array (Int,Int) Int ) -> [Char]
 printArraySave arr = unlines [unwords [if (arr ! (x, y)) >= 0 then show (arr ! (x, y)) else show ('.') | x <- [0..8]] | y <- [0..8]]
 
 instance Show Board where
-    show (Board num loc) = "number: \n" ++ printArray num ++ "\n location: \n" ++ printArray loc
-
--- Load Board
-load = readFile "../../final project/map.txt" >>= 
-        return  . map scanString . lines >>= \b -> 
-            return (Board (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [9..17]))) (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [0..8]))))
+    show (Board num loc) = "Number: \n" ++ printArray num ++ "\n Corresponding Block: \n" ++ printArray loc
 
 -- Display Board
 -- TODO: output as in pdf file / GUI
 displayBoard :: Board -> [Char]
 displayBoard board = show board
 
+-- Load Board String Manipulation
+loadBoardFormat :: String -> Board
+loadBoardFormat s = Board (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [9..17]))) (array ((0,0),(8,8)) (arrayConstructor (map ((!!) b) [0..8])))
+                    where b = map scanString (lines s)
+
+-- Save Board String Manipulation                    
 saveBoardFormat :: Board -> [Char]
 saveBoardFormat (Board num loc) = filter (\x -> (x /=' ' && x/='\'')) (printArraySave loc ++ printArraySave num)
 
@@ -62,32 +63,42 @@ jigsawBlockCheck :: Board -> Int -> Int -> Int -> Bool
 jigsawBlockCheck (Board num loc) x y n = not (elem n (map ((!) num) (map (\((a,b),_) -> (a,b)) (filter (\((_,_),c) -> c == loc ! (x,y)) (assocs loc)))))
 
 -- Decide whether the player win or not
+-- TODO: win check includes Jigsaw Sudoku Game rules check
 jigsawSudokuCheck :: Board -> Bool
 jigsawSudokuCheck (Board num loc) = not (elem (-1) (elems num))
 
--- Save Board (may change to function)
--- Done in command system
--- Checked by: readFile "file.txt" >>= \a -> readFile "map.txt" >>= \b -> return (a==b)
+-- TODO: redo undo include in command
+-- add parameter list in play function [((Int,Int),Int)]
 
 -- main access point
 main :: IO ()                    
-main = putStrLn "Jigsaw Sudoku">>= \_ ->
-            load >>= \b -> play b
+main = putStrLn "Jigsaw Sudoku Starts">>= \_ ->
+            putStrLn "Please enter board file name(include .txt): " >>= \_ ->
+                getLine >>= \f ->
+                    readFile f >>= \s ->
+                        return (loadBoardFormat s) >>= \b ->
+                            play b f
 
 -- demo play game
-play :: Board -> IO ()
-play sudoku = putStr (displayBoard sudoku) >>= \_ ->
+play :: Board -> String -> IO ()
+play sudoku filename = putStr (displayBoard sudoku) >>= \_ ->
                 putStrLn "Please enter command: " >>= \_ ->
                     getLine >>= \cmd ->
-                        case cmd of 
+                        case cmd of
+                            "load" -> putStrLn "Please enter board file name(include .txt): " >>= \_ ->
+                                        getLine >>= \f ->
+                                            readFile f >>= \s ->
+                                                putStrLn "Read board successfully!\n Initial board:" >>= \_ ->
+                                                    return (loadBoardFormat s) >>= \b ->
+                                                        play b f 
                             "move" -> putStrLn "Row: " >>= \_ -> getChar >>= \y -> putStrLn "Column: " >>= \_ -> getChar >>= \x -> putStrLn "Number: " >>= \_ -> getChar >>= \n ->
                                                     return (move sudoku (scanChar x) (scanChar y) (scanChar n)) >>= \b ->
                                                         if (jigsawSudokuCheck b) then
-                                                            putStrLn "You win!"
+                                                            putStrLn "You win!" >>= \_ ->
+                                                                writeFile filename (saveBoardFormat sudoku) >>= \_ -> 
+                                                                    putStrLn "Saved"
                                                          else 
-                                                            play b
+                                                            play b filename
                             "quit" -> putStrLn "Bye"
-                            "save" -> writeFile "file.txt" (saveBoardFormat sudoku) >>= \_ -> putStrLn "Saved"
-                            _ -> play sudoku                                
-
--- TODO: redo
+                            "save" -> writeFile filename (saveBoardFormat sudoku) >>= \_ -> putStrLn "Saved"
+                            _ -> play sudoku filename                               
